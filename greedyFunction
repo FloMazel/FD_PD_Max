@@ -1,41 +1,4 @@
 
-GetFD_maxFD <- function(i,params,PathToData,Percs=c(.1,.2,.3,.4,.5,.6,.7,.8,.9),backward=F,penal=T,deter=F,meanN=1,sdN=1,nrep=100){
- 
-  # Get  parameters
-  dataName=params[i,'dataName']
-  NameFile=paste(dataName,'.RDS',sep='')
-  thres=params[i,'thres']
-  
-  # Load DataSet
-  data=readRDS(paste(PathToData,NameFile,sep=''))
-  
-  #Get Traits
-  pca=data$PCOA_Traits
-  Traits=pca$tab[,seq_len(sum(cumsum(pca$eig/sum(pca$eig)) <= thres)+1)]
-  if (class(Traits)=='numeric') {names(Traits)=rownames(pca$tab)}
-  if (class(Traits)=='numeric') {n.trt=1} else {n.trt=ncol(Traits)}
-
-  #Get FD for PDmax and random Samples
-  df=list()
-  for (kkk in 1:nrep) {df[[kkk]]=FDrdPdsetsmaxFD(Perc=Percs,Traits=Traits,data.id=dataName,backward=backward,thres=thres,penal=penal,deter=T,PenalK=abs(rnorm(n=1,mean=meanN,sd=sdN)),PenalY=abs(rnorm(n=1,mean=meanN,sd=sdN)))}
-
-df=do.call(rbind,lapply(1:length(Percs),reorga,df))
-
-
-  return(df)
-}
-
-
-reorga=function(x,df)
-{
-  df1=do.call("rbind", lapply(df, "[", x, )) 
-  selec=c(1:length(df))[df1[,'FRic_FD_For']==max(df1[,'FRic_FD_For'])]
-  if (length(selec)>1){selec=sample(selec,1)}
-  if (is.na(selec)){selec=1}
-  return(df1[selec,])
-}
-
-
 distPointtoCenter=function(points,center){dist(rbind(points,center))[1]}
 GetMinDistfromSet=function(antisetX,set,Traits){min(apply(Traits[set,],1,distPointtoCenter,Traits[antisetX,]))}
 
