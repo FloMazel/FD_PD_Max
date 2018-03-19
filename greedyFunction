@@ -1,9 +1,31 @@
-
+# Internal functions to load
 distPointtoCenter=function(points,center){dist(rbind(points,center))[1]}
 GetMinDistfromSet=function(antisetX,set,Traits){min(apply(Traits[set,],1,distPointtoCenter,Traits[antisetX,]))}
 
+#Maximizing PD function 
+GreedyMMD=function(Tree,k,tol = 1e-08)
+{
+  D=cophenetic(Tree)
+  #1. Initialize 2 first species
+  #set1=arrayInd(which.max(D),dim(D))[1:2]
+  set1=arrayInd(which(abs(c(D)-max(D))<tol),dim(D)) #list of pairs
+  set1=set1[sample(x=1:dim(set1)[1],1),] #randomly choose one
+  set=colnames(D)[set1]
+  c=2
+  #2. Loop
+  while (c<k)
+  {
+    #print(c)
+    MinDist=apply(D[set,],2,min)
+    #set=c(set,names(MinDist)[(MinDist==max(MinDist))][1])
+    set2=names(MinDist)[abs(MinDist-max(MinDist))<tol] #find all other sp that would maximise PD
+    set=c(set,sample(set2,1)) #randomly select 1
+    c=c+1
+  }
+  return(set) 
+}
 
-
+#Maximizing FD function 
 GreedyFD=function(Traits,k,tol = 1e-08,penal=T,deter=T,PenalK=1,PenalY=1)
 {
   D=as.matrix( dist(Traits))
