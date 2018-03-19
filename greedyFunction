@@ -1,0 +1,86 @@
+
+GetFD_maxFD <- function(i,params,PathToData,Percs=c(.1,.2,.3,.4,.5,.6,.7,.8,.9),backward=F,penal=T,deter=F,meanN=1,sdN=1,nrep=100){
+ 
+  # Get  parameters
+  dataName=params[i,'dataName']
+  NameFile=paste(dataName,'.RDS',sep='')
+  thres=params[i,'thres']
+  
+  # Load DataSet
+  data=readRDS(paste(PathToData,NameFile,sep=''))
+  
+  #Get Traits
+  pca=data$PCOA_Traits
+  Traits=pca$tab[,seq_len(sum(cumsum(pca$eig/sum(pca$eig)) <= thres)+1)]
+  if (class(Traits)=='numeric') {names(Traits)=rownames(pca$tab)}
+  if (class(Traits)=='numeric') {n.trt=1} else {n.trt=ncol(Traits)}
+
+  #Get FD for PDmax and random Samples
+  df=list()
+  for (kkk in 1:nrep) {df[[kkk]]=FDrdPdsetsmaxFD(Perc=Percs,Traits=Traits,data.id=dataName,backward=backward,thres=thres,penal=penal,deter=T,PenalK=abs(rnorm(n=1,mean=meanN,sd=sdN)),PenalY=abs(rnorm(n=1,mean=meanN,sd=sdN)))}
+
+df=do.call(rbind,lapply(1:length(Percs),reorga,df))
+
+
+  return(df)
+}
+
+
+reorga=function(x,df)
+{
+  df1=do.call("rbind", lapply(df, "[", x, )) 
+  selec=c(1:length(df))[df1[,'FRic_FD_For']==max(df1[,'FRic_FD_For'])]
+  if (length(selec)>1){selec=sample(selec,1)}
+  if (is.na(selec)){selec=1}
+  return(df1[selec,])
+}
+
+
+distPointtoCenter=function(points,center){dist(rbind(points,center))[1]}
+GetMinDistfromSet=function(antisetX,set,Traits){min(apply(Traits[set,],1,distPointtoCenter,Traits[antisetX,]))}
+
+
+
+GreedyFD=function(Traits,k,tol = 1e-08,penal=T,deter=T,PenalK=1,PenalY=1)
+{
+  D=as.matrix( dist(Traits))
+  #1. Initialize 2 first species
+  set1=arrayInd(which(abs(c(D)-max(D))<tol),dim(D)) #list of pairs
+  set1=set1[sample(x=1:dim(set1)[1],1),] #randomly choose one
+  set=colnames(D)[set1]
+  c=2
+  #2. Loop
+  print(c(PenalK,PenalY))
+  
+  while (c<k)
+  {
+    
+  if (class(Traits)=='numeric') {
+    antiset=names(Traits)[!names(Traits) %in% set]
+    dd=abs(mean(Traits[set])-Traits[antiset])} else
+    {antiset=rownames(Traits)[!rownames(Traits) %in% set]
+    dd=apply(Traits[antiset,],1,distPointtoCenter,apply(Traits[set,],2,mean))
+        
+    # penalisation for neighbouring of species already in the set    
+    if (penal==T)
+      {
+      #print(paste('Penalizing',c,sep='_'))
+     # Mindists=sapply(antiset,GetMinDistfromSet,set=set,Traits=Traits)
+      Mindists=apply(D[set,antiset],2,min)
+     
+ dd=dd-PenalK*exp(-PenalY*Mindists[names(dd)]) 
+      }
+    }
+    
+    # deterministic
+    if (deter==T){newSP=names(dd)[dd==max(dd)]}
+    # probalistic
+    if (deter==F){newSP=sample(names(dd),size=1,prob=dd^2)}
+
+    newSP=sample(newSP,1) #randomly select 1
+    set=c(set,newSP)
+    c=c+1
+print(paste('#species=',c,'_over',k,sep='')) 
+ }
+  return(set)
+}
