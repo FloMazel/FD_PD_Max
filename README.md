@@ -26,11 +26,16 @@ Briefly, the "GreedyFD" function use a Traits matrix (Traits * species) and try 
 The algorithm is as follow (see Mazel et al 2018 for mroe details and justificaitons)
 
 Step 1. Select the two species with the highest trait distance
+
 Step 2. Compute the centroid of these two selected species
+
 Step 3. Compute distances between species not in the set and this ‘set centroid’. 
+
 Step 4. Penalize these distance by adding the following factor f (Eq. 1)
         f = K x eL x minD					  (eq. 1)
         with K and L being penalizing factors and minD the distance between a given candidate species and the nearest species             already in the selected set. 
+        
 Step 5. Select the species that maximized the penalized distance
+
 Step 6. Go back to step one with this new set of species until the desired number of species is reached. 
 
